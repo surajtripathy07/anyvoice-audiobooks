@@ -27,6 +27,13 @@ Book already loaded: Pride and Prejudice (63 chapters, heuristic-cast). Position
 - Suraj has NOT yet listened to Chatterbox output or the ambience loops — both need his ear. If Chatterbox voices drift
   from the Kokoro originals, lengthen PROMPT_TEXT or raise cfg_weight.
 
+## Session 3 (27 Aug, evening): public release prep
+- MIT LICENSE, CONTRIBUTING.md, .env.example, README rewrite with screenshot, landing page in docs/ (GitHub Pages at
+  https://surajtripathi.info/anyvoice-audiobooks/ — Suraj's user-site custom domain applies to project pages), PWA
+  manifest + icon, help sheet (auto-opens once), keyboard shortcuts, "Try Pride and Prejudice" sample fetch,
+  Export: .m4b with chapter markers (anyvoice/export.py) + per-chapter mp3, optional ambience baked in.
+  Verified: 40-chapter m4b, 6.5 h, chapters + tags correct. Repo is PUBLIC. Show HN draft in docs/hn-post.md (Suraj posts).
+
 ## Blocked: no working LLM key
 - `dev-assist/.env` Anthropic key -> 401 invalid; OpenAI key -> account has no credits
 - Add ONE to `.env` (see README) and restart. Then re-upload the book so it gets LLM casting (heuristic is rough on untagged dialogue, and marks every line `neutral` -> no emotion).

@@ -2,9 +2,11 @@
 <h1 align="center">AnyVoice</h1>
 <p align="center"><b>Drop a book. Hear the cast.</b><br>
 Turns any epub / pdf / txt into a full-cast audiobook — characters detected and voiced automatically — and starts playing on your phone while the rest renders. Runs on your own machine.</p>
-<p align="center"><a href="https://surajtripathy07.github.io/anyvoice-audiobooks/">Website</a> · <a href="#quick-start">Quick start</a> · <a href="#how-it-works">How it works</a> · <a href="CONTRIBUTING.md">Contributing</a> · MIT</p>
+<p align="center"><a href="https://surajtripathi.info/anyvoice-audiobooks/">Website</a> · <a href="#quick-start">Quick start</a> · <a href="#how-it-works">How it works</a> · <a href="CONTRIBUTING.md">Contributing</a> · MIT</p>
 
 ---
+
+<p align="center"><img src="docs/screenshots/player.jpg" width="780" alt="AnyVoice player: chapters with render progress, export panel, and the now-playing bar showing the speaking character"></p>
 
 ## What it does
 
@@ -13,6 +15,7 @@ Turns any epub / pdf / txt into a full-cast audiobook — characters detected an
 - **Voices it locally** — [Kokoro-82M](https://github.com/hexgrad/kokoro) for narration (~4× realtime on an M1 Max, 27 English voices). Optional [Chatterbox](https://github.com/resemble-ai/chatterbox) re-renders dialogue expressively in the background — angry lines sound angry.
 - **Plays immediately** — first audio in ~15 s; the pipeline stays ahead of you, chapter by chapter, from wherever you are listening.
 - **Lets you recast** — don't like Mr. Darcy? Pick another voice; only his lines re-render, starting from your position.
+- **Exports** — a real `.m4b` audiobook with chapter markers and title/author tags, or any chapter as mp3, with or without the ambience mixed in.
 - **Sets the scene** — subtle procedural background sound (rain, thunder, hearth, carriage, ballroom murmur…) that follows the text. Off / low / mid. Nothing sampled, nothing to license.
 - **Phone-first** — open it on your phone over Wi-Fi, add to home screen, lock-screen controls, resume where you left off.
 
