@@ -10,7 +10,17 @@ Everything runs on your Mac; the only paid piece is the LLM that works out who i
 ./run.sh                # http://localhost:8080  — phone: http://<mac-ip>:8080 on the same Wi-Fi
 ```
 
-First run downloads nothing (models are in `models/`). Rendering is ~4× realtime on an M1 Max.
+One-time setup (models are not in git):
+
+```bash
+uv sync
+mkdir -p models && cd models
+curl -LO https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
+curl -LO https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
+```
+
+Rendering is ~4× realtime on an M1 Max. For expressive character dialogue also start the Chatterbox worker
+(`engines/chatterbox/run.sh`, first start downloads ~3 GB); the app uses it automatically when it is up.
 
 ## LLM key (recommended — the heuristic fallback is rough on unattributed dialogue)
 

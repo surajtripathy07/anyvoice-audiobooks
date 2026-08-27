@@ -15,6 +15,7 @@ dependencies = [
     "pymupdf>=1.28.2",
     "python-dotenv>=1.2.3",
     "python-multipart>=0.0.32",
+    "scipy>=1.18.1",
     "soundfile>=0.14.0",
     "uvicorn[standard]>=0.52.4",
 ]

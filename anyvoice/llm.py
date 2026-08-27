@@ -22,9 +22,20 @@ class Line(BaseModel):
     emotion: Literal["neutral", "happy", "sad", "angry", "afraid", "surprised", "tender", "sarcastic", "urgent", "whisper"] = "neutral"
 
 
+AMBIENCES = ["none", "rain", "thunderstorm", "wind", "hearth", "night", "sea", "countryside", "street", "ballroom", "carriage", "forest"]
+MOODS = ["none", "tense", "warm", "melancholy", "playful", "romantic"]
+
+
+class Scene(BaseModel):
+    start_para: int = Field(description="The [P<n>] paragraph number where this setting begins (first scene starts at the chapter's first paragraph)")
+    ambience: Literal["none", "rain", "thunderstorm", "wind", "hearth", "night", "sea", "countryside", "street", "ballroom", "carriage", "forest"] = "none"
+    mood: Literal["none", "tense", "warm", "melancholy", "playful", "romantic"] = "none"
+
+
 class Attribution(BaseModel):
     characters: list[Character] = Field(description="NEW characters introduced in this chapter, or existing ones whose details you can now improve")
     lines: list[Line] = Field(description="One entry for EVERY [Q<id>] tag in the chapter")
+    scenes: list[Scene] = Field(description="Setting changes through the chapter, for subtle background sound. Always at least one entry.")
 
 
 SYSTEM = """You are the casting director for a full-cast audiobook. You receive one chapter of a book in which every quoted passage is tagged [Q<id>] immediately before it, plus the roster of characters known so far.
@@ -34,6 +45,7 @@ Your job:
 2. Add any NEW speaking character to `characters` with gender, rough age, and a one-line description. Do not re-list existing roster characters unless you are correcting gender/age/description.
 3. Track dialogue turns carefully in long unattributed back-and-forth exchanges: speakers usually alternate, and a paragraph break usually means the speaker changed.
 4. Give each line a one-word emotion from the allowed list, defaulting to neutral.
+5. Mark the setting for background sound: paragraphs are tagged [P<n>]. Emit a `scenes` entry whenever the physical setting or weather changes, with the paragraph where it starts. Ambience choices: rain, thunderstorm, wind, hearth (indoors by a fire, evening), night (outdoors, crickets), sea, countryside (fields, gardens, a walk), street (town bustle), ballroom (assembly, party, dinner with many guests), carriage (travelling), forest, or none. Use 'none' for ordinary indoor conversation when the text gives no cue — background sound should be rare and earned, never guessed. Mood is for optional music: tense, warm, melancholy, playful, romantic, or none.
 
 Be precise and complete: the `lines` list must contain exactly one entry per [Q<id>] tag, in order."""
 

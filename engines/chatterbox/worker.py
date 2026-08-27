@@ -12,6 +12,11 @@ _orig = torch.load
 def _patched(*a, **k):
     k.setdefault("map_location", torch.device(DEV)); return _orig(*a, **k)
 torch.load = _patched
+import perth
+if getattr(perth, "PerthImplicitWatermarker", None) is None:      # its deps don't import on Python 3.14
+    class _NoWatermark:
+        def apply_watermark(self, wav, sample_rate=None, **kw): return wav
+    perth.PerthImplicitWatermarker = _NoWatermark
 from chatterbox.tts import ChatterboxTTS
 
 app = FastAPI()

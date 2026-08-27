@@ -12,6 +12,7 @@ DATA = Path(__file__).resolve().parent.parent / "data"
 BOOKS = DATA / "books"
 NARRATOR = "Narrator"
 LOOKAHEAD = 2   # chapters to attribute ahead of the listening cursor
+UPGRADE_AHEAD = 1   # chapters ahead of the cursor to upgrade dialogue with Chatterbox
 
 
 class Library:
@@ -100,7 +101,7 @@ class BookJob:
             for c in self.state["chapters"]:
                 for seg in c["segments"]:
                     if seg["speaker"] == name:
-                        seg["voice"] = voice; seg["audio"] = None; seg["dur"] = 0.0
+                        seg["voice"] = voice; seg["audio"] = None; seg["dur"] = 0.0; seg.pop("cb", None)
         self.save(); self.wake.set()
 
     def voice_for(self, speaker: str) -> str:
@@ -163,13 +164,21 @@ class BookJob:
                     taken = {v.get("voice") for v in s["cast"].values()}
                     s["cast"][l.speaker] = {"gender": "unknown", "age": "unknown", "description": "",
                                             "voice": pick_voice({}, taken, s["narrator_voice"], british)}
+            scenes = sorted(attr.scenes, key=lambda sc: sc.start_para) or []
+            def scene_at(para):
+                cur = ("none", "none")
+                for sc in scenes:
+                    if sc.start_para <= para:
+                        cur = (sc.ambience, sc.mood)
+                return cur
             segs, i = [], 0
             for u in units:
                 speaker, emotion = NARRATOR, "neutral"
                 if u.kind == "quote" and u.id in label:
                     speaker, emotion = label[u.id].speaker, label[u.id].emotion
+                amb, mood = scene_at(u.para)
                 for piece in chunk_for_tts(u.text):
-                    segs.append({"i": i, "speaker": speaker, "emotion": emotion, "text": piece,
+                    segs.append({"i": i, "speaker": speaker, "emotion": emotion, "text": piece, "amb": amb, "mood": mood,
                                  "voice": self.voice_for(speaker), "audio": None, "dur": 0.0}); i += 1
             s["chapters"][idx]["segments"] = segs
             s["chapters"][idx]["status"] = "ready"
@@ -179,20 +188,30 @@ class BookJob:
 
     # ------------------------------------------------------------ synthesis
     def _next_to_synth(self):
+        """Pass 1: anything without audio (fast Kokoro). Pass 2: upgrade dialogue lines to Chatterbox, from the
+        listening position outward, within UPGRADE_AHEAD chapters so the expressive pass stays near the listener."""
+        upgrade = self.lib.tts.chatterbox_available()
         with self.lock:
             chs, cur, cseg = self.state["chapters"], self.state["cursor"], self.state.get("cursor_seg", 0)
             order = chs[cur:] + chs[:cur]
-            for n, c in enumerate(order):
-                if c["status"] != "ready":
-                    if c["idx"] >= cur:    # don't skip ahead past an unattributed chapter in listening order
-                        return None
-                    continue
-                segs = c["segments"]
-                if n == 0:                 # current chapter: from the listening position, then the part already passed
-                    segs = segs[cseg:] + segs[:cseg]
-                for seg in segs:
-                    if not seg["audio"]:
-                        return c["idx"], seg["i"], seg["text"], seg["voice"], seg["emotion"], seg["speaker"]
+            phases = [(False, LOOKAHEAD), (True, UPGRADE_AHEAD), (False, None)] if upgrade else [(False, None)]
+            for want_upgrade, span in phases:
+                for n, c in enumerate(order):
+                    if c["status"] != "ready":
+                        if c["idx"] >= cur and not want_upgrade:
+                            return None    # don't skip ahead past an unattributed chapter in listening order
+                        continue
+                    if span is not None and not (cur <= c["idx"] <= cur + span):
+                        continue
+                    segs = c["segments"]
+                    if n == 0:             # current chapter: from the listening position, then the part already passed
+                        segs = segs[cseg:] + segs[:cseg]
+                    for seg in segs:
+                        if want_upgrade:
+                            if seg["speaker"] != NARRATOR and seg["audio"] and not seg.get("cb"):
+                                return c["idx"], seg["i"], seg["text"], seg["voice"], seg["emotion"], seg["speaker"], True
+                        elif not seg["audio"]:
+                            return c["idx"], seg["i"], seg["text"], seg["voice"], seg["emotion"], seg["speaker"], False
         return None
 
     def _synth_loop(self):
@@ -200,9 +219,9 @@ class BookJob:
             job = self._next_to_synth()
             if job is None:
                 self.wake.wait(2); self.wake.clear(); continue
-            cidx, sidx, text, voice, emotion, speaker = job
+            cidx, sidx, text, voice, emotion, speaker, upgrade = job
             try:
-                fname, dur = self.lib.tts.synth(text, voice, emotion, dialogue=(speaker != NARRATOR))
+                fname, dur = self.lib.tts.synth(text, voice, emotion, dialogue=upgrade)
             except Exception as e:
                 traceback.print_exc()
                 fname, dur = "", 0.0
@@ -211,7 +230,12 @@ class BookJob:
             with self.lock:
                 seg = self.state["chapters"][cidx]["segments"][sidx]
                 if seg["voice"] == voice:               # voice may have been swapped meanwhile
-                    seg["audio"], seg["dur"] = (fname or "skip"), dur
+                    if upgrade:
+                        seg["cb"] = True                # mark even on failure so we don't retry forever
+                        if fname:
+                            seg["audio"], seg["dur"] = fname, dur
+                    else:
+                        seg["audio"], seg["dur"] = (fname or "skip"), dur
             if sidx % 10 == 0:
                 self.save()
         self.save()

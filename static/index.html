@@ -57,10 +57,12 @@ main{padding:0 16px 190px;max-width:760px;margin:0 auto}
     <button class="big primary" id="btn-play" onclick="P.toggle()">▶</button>
     <button onclick="P.step(1)" title="next line">⏩</button>
     <button onclick="P.nextChapter()" title="next chapter">⏭</button>
+    <button class="ghost" onclick="AMB.cycle()" id="btn-amb" title="background sound level">🌧 low</button>
     <button class="spd ghost" onclick="P.speed()" id="btn-spd">1.0×</button>
   </div>
 </div></div>
 <audio id="audio" preload="auto" playsinline></audio>
+<audio id="ambA" loop preload="auto" playsinline></audio><audio id="ambB" loop preload="auto" playsinline></audio>
 
 <script>
 const $=s=>document.querySelector(s), api=(u,o)=>fetch('/api'+u,o).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()});
@@ -116,13 +118,31 @@ function castHtml(b){
   const row=(name,meta,voice)=>`<div class="row"><div class="t"><b>${esc(name)}</b><small>${[meta.gender,meta.age].filter(x=>x&&x!=='unknown').join(', ')}${meta.description?' · '+esc(meta.description):''}</small></div>
     <div class="ctl"><select onchange="swap('${esc(name)}',this.value)">${opt(voice)}</select><button onclick="preview('${voice}',this)">▶</button></div></div>`;
   const names=Object.keys(b.cast).sort();
-  return `<div class="cast">${row('Narrator',{description:'reads everything that is not dialogue'},b.narrator_voice)}
+  const ambRow=`<div class="row"><div class="t"><b>Background sound</b><small>procedural loops, mixed under the voices · tap to preview</small>
+    <div class="ctl" style="flex-wrap:wrap;gap:6px">${(AMBNAMES||[]).map(n=>`<button class="ghost" style="background:var(--panel2);padding:6px 10px;font-size:13px" onclick="ambPreview('${n}',this)">${n}</button>`).join('')}</div></div></div>`;
+  return `<div class="cast">${ambRow}${row('Narrator',{description:'reads everything that is not dialogue'},b.narrator_voice)}
    ${names.map(n=>row(n,b.cast[n],b.cast[n].voice)).join('')}${names.length?'':'<p class="hint">Characters appear here as chapters are cast.</p>'}</div>`;
 }
 async function swap(name,voice){ await api('/books/'+cur.book+'/voice',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name,voice})});
   cur.data=await api('/books/'+cur.book); renderBook(true); P.invalidate(); }
+let AMBNAMES=[], ap=null; function ambPreview(n,btn){ if(ap){ap.pause(); ap=null; if(ap===n) return;} ap=new Audio('/ambience/'+n+'.ogg'); ap.volume=0.5; ap.play(); setTimeout(()=>{ if(ap) ap.pause(); },8000); }
 let pv=null; function preview(voice,btn){ if(pv){pv.pause()} pv=new Audio('/api/voices/'+voice+'/preview'); btn.textContent='…'; pv.onplaying=()=>btn.textContent='◼'; pv.onended=()=>btn.textContent='▶'; pv.play(); }
 async function delBook(){ if(!confirm('Delete this book and its audio?'))return; await api('/books/'+cur.book,{method:'DELETE'}); P.stopAll(); showLibrary(); }
+
+/* ---------------- ambience (background sound, always under the voices) ---------------- */
+const AMB={levels:[{n:'off',v:0},{n:'low',v:0.12},{n:'mid',v:0.22}],li:1,cur:'none',els:[$('#ambA'),$('#ambB')],active:0,fade:null,
+  init(){ try{ const l=localStorage.getItem('amb'); if(l!==null) this.li=+l; }catch(e){} this.label(); },
+  label(){ $('#btn-amb').textContent=(this.cur!=='none'?'🌧 ':'🔈 ')+this.levels[this.li].n+(this.cur!=='none'?' · '+this.cur:''); },
+  cycle(){ this.li=(this.li+1)%this.levels.length; try{localStorage.setItem('amb',this.li)}catch(e){} const v=this.levels[this.li].v; this.els.forEach((e,i)=>{ if(i===this.active) e.volume=v; }); if(v===0){this.els.forEach(e=>e.pause())} else if(this.cur!=='none'){ this.els[this.active].play().catch(()=>{}) } this.label(); },
+  set(name){ if(name===this.cur) return; this.cur=name||'none'; this.label(); const v=this.levels[this.li].v;
+    const from=this.els[this.active], to=this.els[1-this.active]; this.active=1-this.active; clearInterval(this.fade);
+    if(this.cur==='none'||v===0){ this.fadeOut(from); to.pause(); return; }
+    to.src='/ambience/'+this.cur+'.ogg'; to.volume=0; to.play().catch(()=>{});
+    const t0=Date.now(), D=3500; this.fade=setInterval(()=>{ const k=Math.min(1,(Date.now()-t0)/D); to.volume=v*k; from.volume=v*(1-k); if(k>=1){ clearInterval(this.fade); from.pause(); } },80); },
+  fadeOut(el){ const v0=el.volume, t0=Date.now(); const f=setInterval(()=>{ const k=Math.min(1,(Date.now()-t0)/2500); el.volume=v0*(1-k); if(k>=1){clearInterval(f); el.pause();} },80); },
+  pause(){ this.els.forEach(e=>e.pause()); }, resume(){ if(this.cur!=='none'&&this.levels[this.li].v>0) this.els[this.active].play().catch(()=>{}); },
+};
+AMB.init();
 
 /* ---------------- player ---------------- */
 const A=$('#audio');
@@ -137,22 +157,22 @@ const P={book:null,ch:-1,seg:-1,segs:[],title:'',playing:false,waiting:false,rat
     if(!s||!s.audio){ this.showWaiting(); clearTimeout(this.pollT); this.pollT=setTimeout(async()=>{await this.loadChapter(); if(this.playing)this.playSeg(i)},1500); return; }
     this.waiting=false; clearTimeout(this.pollT);
     if(s.audio==='skip'){ return this.playSeg(i+1); }
-    A.src='/audio/'+s.audio; A.playbackRate=this.rate; this.show(s);
+    A.src='/audio/'+s.audio; A.playbackRate=this.rate; this.show(s); AMB.set(s.amb);
     if(this.playing){ A.play().catch(()=>{}); }
     const n=this.segs[i+1]; if(n&&n.audio&&n.audio!=='skip') fetch('/audio/'+n.audio).catch(()=>{});   // warm cache
     localStorage.setItem('pos:'+this.book,JSON.stringify({ch:this.ch,seg:i}));
     if(i%5===0) fetch('/api/books/'+this.book+'/cursor',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chapter:this.ch,seg:i})}).catch(()=>{});
     this.media(s);
   },
-  show(s){ $('#np-ch').textContent=this.title; $('#np-who').textContent=s.speaker+(s.emotion&&s.emotion!=='neutral'?' · '+s.emotion:''); $('#np-txt').textContent=s.text; $('#btn-play').textContent=this.playing?'⏸':'▶'; },
+  show(s){ $('#np-ch').textContent=this.title; $('#np-who').textContent=s.speaker+(s.emotion&&s.emotion!=='neutral'?' · '+s.emotion:'')+(s.amb&&s.amb!=='none'?'   ⟡ '+s.amb:''); $('#np-txt').textContent=s.text; $('#btn-play').textContent=this.playing?'⏸':'▶'; },
   showWaiting(){ this.waiting=true; $('#np-ch').textContent=this.title; $('#np-who').textContent='rendering…'; $('#np-txt').textContent=this.status==='ready'?'Voices are being generated for this line — a few seconds.':'Casting this chapter (finding who speaks each line)…'; },
-  toggle(){ if(this.book===null)return; if(A.paused){ this.playing=true; if(this.waiting||!A.src)this.playSeg(this.seg); else A.play(); } else { this.playing=false; A.pause(); } $('#btn-play').textContent=this.playing?'⏸':'▶'; },
+  toggle(){ if(this.book===null)return; if(A.paused){ this.playing=true; if(this.waiting||!A.src)this.playSeg(this.seg); else A.play(); AMB.resume(); } else { this.playing=false; A.pause(); AMB.pause(); } $('#btn-play').textContent=this.playing?'⏸':'▶'; },
   step(d){ const n=this.seg+d; if(n<0)return this.prevChapter(); this.playSeg(n); },
   async nextChapter(){ if(this.ch+1>=cur.data.chapters.length){ this.playing=false; $('#btn-play').textContent='▶'; return; } this.start(this.book,this.ch+1,0); },
   async prevChapter(){ if(this.ch===0)return this.playSeg(0); this.start(this.book,this.ch-1,0); },
   speed(){ const r=[1,1.15,1.3,1.5,0.85]; this.rate=r[(r.indexOf(this.rate)+1)%r.length]; A.playbackRate=this.rate; $('#btn-spd').textContent=this.rate.toFixed(2).replace(/0$/,'')+'×'; },
   async invalidate(){ if(this.book!==null){ await this.loadChapter(); } },
-  stopAll(){ A.pause(); A.removeAttribute('src'); this.book=null; $('#player').classList.remove('on'); },
+  stopAll(){ A.pause(); A.removeAttribute('src'); AMB.pause(); this.book=null; $('#player').classList.remove('on'); },
   showResume(pos){ const b=cur.data; const c=b.chapters[pos.ch]; if(!c)return; const el=document.createElement('div'); el.className='card'; el.innerHTML=`<h3>▶ Resume</h3><div class="sub">${esc(c.title)} · line ${pos.seg+1}</div>`; el.onclick=()=>{this.start(b.id,pos.ch,pos.seg); el.remove()}; $('#panel').before(el); },
   media(s){ if(!('mediaSession' in navigator))return; navigator.mediaSession.metadata=new MediaMetadata({title:this.title,artist:s.speaker,album:cur.data?cur.data.title:'AnyVoice'});
     navigator.mediaSession.setActionHandler('play',()=>this.toggle()); navigator.mediaSession.setActionHandler('pause',()=>this.toggle());
@@ -164,7 +184,7 @@ A.addEventListener('pause',()=>{ if(!A.ended && !P.playing) $('#btn-play').textC
 A.addEventListener('error',()=>{ if(P.playing) setTimeout(()=>P.playSeg(P.seg+1),300); });
 function fmt(s){ s=Math.round(s); return s>=3600?`${Math.floor(s/3600)}h ${Math.floor(s%3600/60)}m`:`${Math.floor(s/60)}m ${s%60}s`; }
 function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-(async()=>{ VOICES=await api('/voices'); const st=await api('/status'); $('#status').textContent=st.llm?`LLM: ${st.llm_model}`:'heuristic casting · no LLM key'; showLibrary(); })();
+(async()=>{ VOICES=await api('/voices'); AMBNAMES=(await api('/ambience')).names.filter(n=>n!=='none'); const st=await api('/status'); $('#status').textContent=st.llm?`LLM: ${st.llm_model}`:'heuristic casting · no LLM key'; showLibrary(); })();
 </script>
 </body>
 </html>

@@ -12,6 +12,21 @@ Book already loaded: Pride and Prejudice (63 chapters, heuristic-cast). Position
 - Cast panel: per-character voice swap with preview; only that character's lines re-render, from the current line outward
 - Lock-screen controls, resume, speed, line-level progress
 
+## Added this evening (27 Aug, session 2)
+- **Ambience layer**: `anyvoice/ambience.py` renders 11 procedural loops (rain, thunderstorm, wind, hearth, night, sea,
+  countryside, street, ballroom, carriage, forest) — filtered noise + event models, nothing to license — to `data/ambience/*.ogg`.
+  LLM schema has `scenes[{start_para, ambience, mood}]` (paragraphs are tagged [P<n>] in the prompt); heuristic has a
+  deliberately conservative keyword fallback. Segments carry `amb`/`mood`; the player crossfades two looping <audio>
+  elements (3.5 s) at ~-18 dB with an off/low/mid toggle (🌧 button) and previews in the Cast tab. `mood` (music) is
+  tagged but unused so far.
+- **Chatterbox works** (Perth watermarker stubbed — its deps don't import on 3.14). Speed on M1 Max MPS: ~0.5x realtime,
+  so it runs as an **upgrade pass**: Kokoro renders everything first (instant listening), then dialogue lines within 1
+  chapter of the cursor are re-rendered expressively and swapped in (`seg.cb`). Emotion -> exaggeration/cfg in `tts.EXPRESS`.
+  Voice prompts for Chatterbox are Kokoro renders of each cast voice (`data/prompts/`), so the cast keeps its voices.
+- Synthesis priority is now: Kokoro for cursor..+2 chapters -> Chatterbox upgrades cursor..+1 -> Kokoro for the rest.
+- Suraj has NOT yet listened to Chatterbox output or the ambience loops — both need his ear. If Chatterbox voices drift
+  from the Kokoro originals, lengthen PROMPT_TEXT or raise cfg_weight.
+
 ## Blocked: no working LLM key
 - `dev-assist/.env` Anthropic key -> 401 invalid; OpenAI key -> account has no credits
 - Add ONE to `.env` (see README) and restart. Then re-upload the book so it gets LLM casting (heuristic is rough on untagged dialogue, and marks every line `neutral` -> no emotion).

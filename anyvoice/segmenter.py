@@ -43,7 +43,7 @@ def render_for_llm(units: list[Unit]) -> str:
     out, last_para = [], -1
     for u in units:
         if u.para != last_para:
-            out.append("\n"); last_para = u.para
+            out.append(f"\n[P{u.para}]"); last_para = u.para
         out.append(f" [Q{u.id}]{u.text}" if u.kind == "quote" else " " + u.text)
     return "".join(out).strip()
 

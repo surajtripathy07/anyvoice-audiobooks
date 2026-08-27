@@ -10,10 +10,12 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from anyvoice.pipeline import Library, NARRATOR
 from anyvoice.tts import VOICES, AUDIO_DIR
+from anyvoice.ambience import ensure_all, AMB_DIR, AMBIENCES
 
 ROOT = Path(__file__).resolve().parent
 app = FastAPI(title="AnyVoice")
 lib = Library()
+AMB_FILES = ensure_all()
 PREVIEW = "Hello there. I could be the voice of this character, reading every line they speak in the story."
 
 
@@ -26,6 +28,11 @@ def index():
 def status():
     return {"llm": bool(lib.llm), "llm_provider": getattr(lib.llm, "provider", None), "llm_model": getattr(lib.llm, "model", None),
             "llm_error": lib.llm_error, "books": len(lib.books)}
+
+
+@app.get("/api/ambience")
+def ambience():
+    return {"loops": AMB_FILES, "names": AMBIENCES}
 
 
 @app.get("/api/voices")
@@ -120,4 +127,5 @@ def swap_voice(bid: str, v: VoiceSwap):
 
 
 app.mount("/audio", StaticFiles(directory=str(AUDIO_DIR)), name="audio")
+app.mount("/ambience", StaticFiles(directory=str(AMB_DIR)), name="ambience")
 app.mount("/static", StaticFiles(directory=str(ROOT / "static")), name="static")

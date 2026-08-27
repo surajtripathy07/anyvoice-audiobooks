@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from collections import Counter, defaultdict
 from .segmenter import Unit
-from .llm import Attribution, Character, Line
+from .llm import Attribution, Character, Line, Scene
 
 VERBS = r"(?:said|replied|cried|asked|answered|continued|added|observed|returned|exclaimed|whispered|muttered|called|repeated|remarked|declared|inquired|interrupted|shouted|laughed|sighed|began|went on|put in|demanded|urged|protested|murmured|groaned|insisted|agreed|admitted)"
 TITLE = r"(?:Mr\.|Mrs\.|Miss|Ms\.|Lady|Sir|Lord|Dr\.|Doctor|Colonel|Captain|Aunt|Uncle|Professor)"
@@ -30,6 +30,35 @@ peter paul mark luke matthew andrew philip simon stephen david daniel samuel jos
 oliver jacob ethan noah liam mason logan alexander sebastian nathan caleb adam owen tom tim bill bob jim joe jon ned robb tyrion
 jaime jorah sam bran frodo sam gandalf aragorn legolas gimli boromir bilbo pip heathcliff edgar linton hindley lockwood
 sherlock watson holmes mycroft lestrade victor jean javert marius gavroche pip joe magwitch herbert wemmick jaggers""".split())
+
+
+SCENE_WORDS = [
+    ("thunderstorm", r"\b(thunder|lightning|storm)\b"), ("rain", r"\b(rain|raining|rained|drizzle|downpour|showers?)\b"),
+    ("ballroom", r"\b(the ball|assembly|assemblies|danc(ed|ing)|the party|guests)\b"),
+    ("carriage", r"\b(carriage|coach|chaise|post-chaise)\b"), ("sea", r"\b(sea|shore|waves|beach|harbour|harbor)\b"),
+    ("forest", r"\b(wood|woods|forest|grove|trees|thicket)\b"), ("street", r"\b(streets?|market|the crowd|bustle)\b"),
+    ("night", r"\b(moonlight|moon|stars|midnight)\b"), ("wind", r"\b(wind|windy|gust|gale)\b"),
+    ("hearth", r"\b(fireside|hearth|fireplace|by the fire)\b"),
+    ("countryside", r"\b(garden|lane|meadow|fields|shrubbery|hills)\b"),
+]
+
+
+def scenes_by_keywords(units: list[Unit]) -> list[Scene]:
+    paras: dict[int, str] = {}
+    for u in units:
+        paras[u.para] = paras.get(u.para, "") + " " + u.text.lower()
+    scenes, current, last_switch = [Scene(start_para=min(paras) if paras else 0)], "none", -99
+    for pi in sorted(paras):
+        counts = {name: len(re.findall(rx, paras[pi])) for name, rx in SCENE_WORDS}
+        best = max(counts, key=counts.get)
+        # conservative on purpose: a wrong ambience is worse than none. Two cues in one paragraph, or
+        # the same cue in two consecutive paragraphs.
+        prev = paras.get(pi - 1, "")
+        strong = counts[best] >= 2 or (counts[best] == 1 and re.search(dict(SCENE_WORDS)[best], prev))
+        if best != current and strong:
+            current, last_switch = best, pi
+            scenes.append(Scene(start_para=pi, ambience=current))
+    return scenes
 
 
 def attribute(units: list[Unit], roster: list[dict]) -> Attribution:
@@ -100,7 +129,8 @@ def attribute(units: list[Unit], roster: list[dict]) -> Attribution:
             f = sum(v for w, v in ctx_words[name].items() if w in FEMALE_WORDS)
             m = sum(v for w, v in ctx_words[name].items() if w in MALE_WORDS)
             c.gender = "female" if f > m else "male" if m > f else "unknown"
-    return Attribution(characters=list(new.values()), lines=[Line(id=i, speaker=s, emotion="neutral") for i, s in lines])
+    return Attribution(characters=list(new.values()), lines=[Line(id=i, speaker=s, emotion="neutral") for i, s in lines],
+                       scenes=scenes_by_keywords(units))
 
 
 def _canon(name: str, known: dict, new: dict) -> str:
