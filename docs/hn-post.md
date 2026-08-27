@@ -14,6 +14,8 @@ How it works: the book is split into narration and quoted units; an LLM labels w
 
 There's also subtle scene ambience (rain, thunder, hearth, carriage, ballroom murmur) synthesized procedurally from filtered noise so there's nothing to license; the LLM tags scene changes per paragraph.
 
+How it differs from what exists: ebook2audiobook, audiblez and abogen are excellent single-narrator batch converters; alexandria-audiobook and audiobook-creator do LLM multi-voice casting but also as batch jobs — render the book, then listen elsewhere. AnyVoice is a player: casting runs a chapter ahead, you hear it in seconds, and recasting a character re-renders from where you are. Ambience and the background expressive pass only make sense in that model.
+
 Honest state: a few days old. Tested end to end on Pride and Prejudice. PDF handling is heuristic. Without an LLM key it falls back to regex speech-tag heuristics, which are rough on long untagged exchanges. Everything runs on your machine; only the chapter text goes to the LLM for casting. MIT.
 
 Things I'd love input on: better open expressive TTS at near-realtime on consumer hardware, and whether anyone has a good approach to attributing long unattributed dialogue runs without a frontier model.

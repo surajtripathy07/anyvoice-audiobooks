@@ -77,6 +77,16 @@ Details and a map of the code: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 A few days old. Tested end-to-end on *Pride and Prejudice* (63 chapters). PDF extraction is heuristic and untested on real-world novels; single-quote dialogue is not yet split. Issues and PRs welcome — the "good first contributions" list is in CONTRIBUTING.
 
+## Related projects
+
+Good tools already exist; the difference is that they make audiobook *files* and AnyVoice is an audiobook *app* — casting runs a chapter ahead of you and you listen while it renders.
+
+- [ebook2audiobook](https://github.com/DrewThomasson/ebook2audiobook) — the category leader: single narrator, voice cloning, 1,000+ languages, many engines.
+- [audiblez](https://github.com/santinic/audiblez), [abogen](https://github.com/denizsafak/abogen) — one-command Kokoro → `.m4b` (abogen adds synced captions).
+- [alexandria-audiobook](https://github.com/Finrandojin/alexandria-audiobook) — multi-voice studio: LLM script annotation, voice cloning/design, LoRA, per-line direction. If you want to *produce* an audiobook, use that.
+- [audiobook-creator](https://github.com/prakharsr/audiobook-creator), [VoxNovel](https://github.com/DrewThomasson/VoxNovel) — earlier multi-voice batch converters (LLM / BookNLP attribution).
+- [tts-audiobook-tool](https://github.com/zeropointnine/tts-audiobook-tool) — many engines, synced reader; dialogue gets a separate voice but not per character.
+
 ## Copyright, plainly
 
 AnyVoice converts books *you* have for *your* listening, on your hardware, like a screen reader. It stores nothing outside your machine and shares nothing. Don't redistribute the audio it makes from copyrighted books. Public-domain works are fair game for anything.
