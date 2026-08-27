@@ -1,0 +1,8 @@
+.env
+models/
+data/
+.venv/
+__pycache__/
+logs/
+samples/
+engines/chatterbox/.venv/

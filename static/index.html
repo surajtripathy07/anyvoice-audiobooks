@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#14110f">
+<title>AnyVoice</title>
+<style>
+:root{--bg:#14110f;--panel:#1f1a17;--panel2:#2a2320;--ink:#f3ede6;--mute:#a69b91;--acc:#f0a43c;--acc2:#7cc4a0;--bad:#e06c6c;--r:14px}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 -apple-system,Inter,Segoe UI,Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;background:var(--panel2);border:0;border-radius:10px;padding:10px 14px;cursor:pointer}
+button.primary{background:var(--acc);color:#1a1207;font-weight:600}
+button.ghost{background:transparent;color:var(--mute)}
+button:disabled{opacity:.4}
+select{font:inherit;color:var(--ink);background:var(--panel2);border:0;border-radius:8px;padding:8px 10px;max-width:100%}
+header{display:flex;align-items:center;gap:12px;padding:14px 16px;position:sticky;top:0;background:rgba(20,17,15,.92);backdrop-filter:blur(8px);z-index:5}
+header h1{font-size:19px;margin:0;letter-spacing:.3px}
+header .chip{margin-left:auto;font-size:12px;color:var(--mute);background:var(--panel);padding:4px 10px;border-radius:99px;white-space:nowrap}
+main{padding:0 16px 190px;max-width:760px;margin:0 auto}
+.drop{display:block;border:2px dashed #4a3e36;border-radius:var(--r);padding:26px 18px;text-align:center;color:var(--mute);margin:8px 0 18px}
+.drop.over{border-color:var(--acc);color:var(--ink)}
+.drop input{display:none}
+.card{background:var(--panel);border-radius:var(--r);padding:14px 16px;margin:10px 0;cursor:pointer}
+.card h3{margin:0 0 4px;font-size:17px}.card .sub{color:var(--mute);font-size:13px}
+.bar{height:5px;background:#3a302a;border-radius:99px;overflow:hidden;margin-top:10px}.bar i{display:block;height:100%;background:var(--acc2);width:0;transition:width .5s}
+.tabs{display:flex;gap:6px;margin:12px 0}.tabs button{flex:1;background:var(--panel)}.tabs button.on{background:var(--panel2);color:var(--acc)}
+.row{display:flex;align-items:center;gap:10px;padding:12px 4px;border-bottom:1px solid #2c2521}
+.row .t{flex:1;min-width:0}.row .t b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.row .t small{color:var(--mute)}
+.row.now b{color:var(--acc)}
+.pill{font-size:11px;padding:3px 8px;border-radius:99px;background:var(--panel2);color:var(--mute);white-space:nowrap}
+.pill.ok{color:var(--acc2)}.pill.work{color:var(--acc)}
+.cast .row{flex-wrap:wrap}.cast .ctl{display:flex;gap:6px;width:100%;margin-top:6px}.cast select{flex:1}
+#player{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid #33291f;padding:12px 16px calc(12px + env(safe-area-inset-bottom));z-index:9;display:none}
+#player.on{display:block}
+#np{max-width:760px;margin:0 auto}
+#np .who{color:var(--acc);font-weight:600;font-size:13px;letter-spacing:.3px}
+#np .txt{font-size:14px;color:var(--ink);max-height:3.9em;overflow:hidden;margin:2px 0 8px}
+#np .ch{color:var(--mute);font-size:12px}
+.ctrls{display:flex;align-items:center;gap:8px;justify-content:center}
+.ctrls button{padding:10px 12px;font-size:18px;line-height:1}
+.ctrls .big{width:58px;height:58px;border-radius:50%;font-size:24px;padding:0}
+.ctrls .spd{font-size:13px;margin-left:auto}
+.err{color:var(--bad);font-size:13px;margin:8px 0}
+.hint{color:var(--mute);font-size:13px}
+.back{margin:10px 0 0;padding-left:0}
+</style>
+</head>
+<body>
+<header><h1>🎧 AnyVoice</h1><span class="chip" id="status">…</span></header>
+<main id="view"></main>
+
+<div id="player"><div id="np">
+  <div class="ch" id="np-ch"></div><div class="who" id="np-who"></div><div class="txt" id="np-txt"></div>
+  <div class="ctrls">
+    <button onclick="P.prevChapter()" title="previous chapter">⏮</button>
+    <button onclick="P.step(-1)" title="previous line">⏪</button>
+    <button class="big primary" id="btn-play" onclick="P.toggle()">▶</button>
+    <button onclick="P.step(1)" title="next line">⏩</button>
+    <button onclick="P.nextChapter()" title="next chapter">⏭</button>
+    <button class="spd ghost" onclick="P.speed()" id="btn-spd">1.0×</button>
+  </div>
+</div></div>
+<audio id="audio" preload="auto" playsinline></audio>
+
+<script>
+const $=s=>document.querySelector(s), api=(u,o)=>fetch('/api'+u,o).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()});
+let VOICES={}, cur={book:null, tab:'chapters', data:null, timer:null};
+
+/* ---------------- library ---------------- */
+async function showLibrary(){
+  clearInterval(cur.timer); cur.book=null; cur.data=null;
+  const v=$('#view'); v.innerHTML=`<label class="drop" id="drop"><input type="file" accept=".epub,.pdf,.txt,.md" onchange="upload(this.files[0])">
+   <b>Drop a book here</b><br><span class="hint">epub · pdf · txt — casting starts immediately</span></label><div id="books"></div>`;
+  const d=$('#drop'); ['dragenter','dragover'].forEach(e=>d.addEventListener(e,ev=>{ev.preventDefault();d.classList.add('over')}));
+  ['dragleave','drop'].forEach(e=>d.addEventListener(e,ev=>{ev.preventDefault();d.classList.remove('over')}));
+  d.addEventListener('drop',ev=>upload(ev.dataTransfer.files[0]));
+  await renderBooks(); cur.timer=setInterval(renderBooks,4000);
+}
+async function renderBooks(){
+  const books=await api('/books'); const el=$('#books'); if(!el)return;
+  el.innerHTML=books.length?books.map(b=>`<div class="card" onclick="openBook('${b.id}')"><h3>${esc(b.title)}</h3>
+    <div class="sub">${esc(b.author)} · ${b.chapters} chapters · ${b.attributed}/${b.chapters} cast · ${b.ready}/${b.segments||'?'} lines rendered</div>
+    <div class="bar"><i style="width:${b.segments?100*b.ready/b.segments:0}%"></i></div></div>`).join(''):'<p class="hint">No books yet.</p>';
+}
+async function upload(f){ if(!f)return; const fd=new FormData(); fd.append('file',f);
+  $('#drop').innerHTML='<b>Reading book…</b>';
+  const r=await fetch('/api/books',{method:'POST',body:fd}); const j=await r.json();
+  if(!r.ok){alert(j.detail||'upload failed');showLibrary();return}
+  openBook(j.id);
+}
+
+/* ---------------- book ---------------- */
+async function openBook(id){
+  clearInterval(cur.timer); cur.book=id; cur.panelHtml=''; cur.data=await api('/books/'+id);
+  renderBook(); cur.timer=setInterval(async()=>{ if(cur.book!==id)return; cur.data=await api('/books/'+id); renderBook(true)},3000);
+  const pos=JSON.parse(localStorage.getItem('pos:'+id)||'null'); if(pos) P.showResume(pos);
+}
+function renderBook(refresh){
+  const b=cur.data, v=$('#view');
+  if(!refresh){ v.innerHTML=`<button class="ghost back" onclick="showLibrary()">‹ Library</button>
+    <h2 style="margin:6px 0 2px">${esc(b.title)}</h2><div class="hint">${esc(b.author)} · casting: ${b.attribution==='llm'?'LLM':'heuristic (no API key)'}</div>
+    <div class="tabs"><button id="tab-chapters" onclick="tab('chapters')">Chapters</button><button id="tab-cast" onclick="tab('cast')">Cast</button>
+    <button class="ghost" onclick="delBook()">🗑</button></div><div id="errs"></div><div id="panel"></div>`; }
+  $('#tab-chapters').className=cur.tab==='chapters'?'on':''; $('#tab-cast').className=cur.tab==='cast'?'on':'';
+  $('#errs').innerHTML=b.errors.length?`<div class="err">${esc(b.errors[b.errors.length-1])}</div>`:'';
+  const html=cur.tab==='chapters'?chaptersHtml(b):castHtml(b);
+  if(html!==cur.panelHtml){ cur.panelHtml=html; $('#panel').innerHTML=html; }
+}
+function tab(t){cur.tab=t;cur.panelHtml='';renderBook(true)}
+function chaptersHtml(b){ return b.chapters.map(c=>{
+  const st=c.status==='ready'?(c.ready===c.segments?`<span class="pill ok">ready · ${fmt(c.duration)}</span>`:`<span class="pill work">${c.ready}/${c.segments} lines</span>`)
+    :c.status==='attributing'?'<span class="pill work">casting…</span>':'<span class="pill">queued</span>';
+  return `<div class="row ${P.ch===c.idx&&P.book===b.id?'now':''}" onclick="P.start('${b.id}',${c.idx},0)"><div class="t"><b>${esc(c.title)}</b><small>${c.words} words</small></div>${st}</div>`}).join('');}
+function castHtml(b){
+  const opt=sel=>Object.entries(VOICES).map(([k,m])=>`<option value="${k}" ${k===sel?'selected':''}>${m.gender==='female'?'♀':'♂'} ${k.slice(3)} — ${m.desc}</option>`).join('');
+  const row=(name,meta,voice)=>`<div class="row"><div class="t"><b>${esc(name)}</b><small>${[meta.gender,meta.age].filter(x=>x&&x!=='unknown').join(', ')}${meta.description?' · '+esc(meta.description):''}</small></div>
+    <div class="ctl"><select onchange="swap('${esc(name)}',this.value)">${opt(voice)}</select><button onclick="preview('${voice}',this)">▶</button></div></div>`;
+  const names=Object.keys(b.cast).sort();
+  return `<div class="cast">${row('Narrator',{description:'reads everything that is not dialogue'},b.narrator_voice)}
+   ${names.map(n=>row(n,b.cast[n],b.cast[n].voice)).join('')}${names.length?'':'<p class="hint">Characters appear here as chapters are cast.</p>'}</div>`;
+}
+async function swap(name,voice){ await api('/books/'+cur.book+'/voice',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name,voice})});
+  cur.data=await api('/books/'+cur.book); renderBook(true); P.invalidate(); }
+let pv=null; function preview(voice,btn){ if(pv){pv.pause()} pv=new Audio('/api/voices/'+voice+'/preview'); btn.textContent='…'; pv.onplaying=()=>btn.textContent='◼'; pv.onended=()=>btn.textContent='▶'; pv.play(); }
+async function delBook(){ if(!confirm('Delete this book and its audio?'))return; await api('/books/'+cur.book,{method:'DELETE'}); P.stopAll(); showLibrary(); }
+
+/* ---------------- player ---------------- */
+const A=$('#audio');
+const P={book:null,ch:-1,seg:-1,segs:[],title:'',playing:false,waiting:false,rate:1,pollT:null,
+  async start(book,ch,seg){ this.book=book; this.ch=ch; this.seg=seg; $('#player').classList.add('on');
+    await api('/books/'+book+'/cursor',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chapter:ch,seg:seg})});
+    await this.loadChapter(); this.playing=true; this.playSeg(seg); renderBook(true); },
+  async loadChapter(){ const c=await api('/books/'+this.book+'/chapters/'+this.ch); this.segs=c.segments; this.title=c.title; this.status=c.status; },
+  async playSeg(i){ if(this.book===null)return;
+    if(i>=this.segs.length && this.status==='ready'){ return this.nextChapter(); }
+    this.seg=i; const s=this.segs[i];
+    if(!s||!s.audio){ this.showWaiting(); clearTimeout(this.pollT); this.pollT=setTimeout(async()=>{await this.loadChapter(); if(this.playing)this.playSeg(i)},1500); return; }
+    this.waiting=false; clearTimeout(this.pollT);
+    if(s.audio==='skip'){ return this.playSeg(i+1); }
+    A.src='/audio/'+s.audio; A.playbackRate=this.rate; this.show(s);
+    if(this.playing){ A.play().catch(()=>{}); }
+    const n=this.segs[i+1]; if(n&&n.audio&&n.audio!=='skip') fetch('/audio/'+n.audio).catch(()=>{});   // warm cache
+    localStorage.setItem('pos:'+this.book,JSON.stringify({ch:this.ch,seg:i}));
+    if(i%5===0) fetch('/api/books/'+this.book+'/cursor',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chapter:this.ch,seg:i})}).catch(()=>{});
+    this.media(s);
+  },
+  show(s){ $('#np-ch').textContent=this.title; $('#np-who').textContent=s.speaker+(s.emotion&&s.emotion!=='neutral'?' · '+s.emotion:''); $('#np-txt').textContent=s.text; $('#btn-play').textContent=this.playing?'⏸':'▶'; },
+  showWaiting(){ this.waiting=true; $('#np-ch').textContent=this.title; $('#np-who').textContent='rendering…'; $('#np-txt').textContent=this.status==='ready'?'Voices are being generated for this line — a few seconds.':'Casting this chapter (finding who speaks each line)…'; },
+  toggle(){ if(this.book===null)return; if(A.paused){ this.playing=true; if(this.waiting||!A.src)this.playSeg(this.seg); else A.play(); } else { this.playing=false; A.pause(); } $('#btn-play').textContent=this.playing?'⏸':'▶'; },
+  step(d){ const n=this.seg+d; if(n<0)return this.prevChapter(); this.playSeg(n); },
+  async nextChapter(){ if(this.ch+1>=cur.data.chapters.length){ this.playing=false; $('#btn-play').textContent='▶'; return; } this.start(this.book,this.ch+1,0); },
+  async prevChapter(){ if(this.ch===0)return this.playSeg(0); this.start(this.book,this.ch-1,0); },
+  speed(){ const r=[1,1.15,1.3,1.5,0.85]; this.rate=r[(r.indexOf(this.rate)+1)%r.length]; A.playbackRate=this.rate; $('#btn-spd').textContent=this.rate.toFixed(2).replace(/0$/,'')+'×'; },
+  async invalidate(){ if(this.book!==null){ await this.loadChapter(); } },
+  stopAll(){ A.pause(); A.removeAttribute('src'); this.book=null; $('#player').classList.remove('on'); },
+  showResume(pos){ const b=cur.data; const c=b.chapters[pos.ch]; if(!c)return; const el=document.createElement('div'); el.className='card'; el.innerHTML=`<h3>▶ Resume</h3><div class="sub">${esc(c.title)} · line ${pos.seg+1}</div>`; el.onclick=()=>{this.start(b.id,pos.ch,pos.seg); el.remove()}; $('#panel').before(el); },
+  media(s){ if(!('mediaSession' in navigator))return; navigator.mediaSession.metadata=new MediaMetadata({title:this.title,artist:s.speaker,album:cur.data?cur.data.title:'AnyVoice'});
+    navigator.mediaSession.setActionHandler('play',()=>this.toggle()); navigator.mediaSession.setActionHandler('pause',()=>this.toggle());
+    navigator.mediaSession.setActionHandler('previoustrack',()=>this.step(-1)); navigator.mediaSession.setActionHandler('nexttrack',()=>this.step(1)); }
+};
+A.addEventListener('ended',()=>{ if(P.playing) P.playSeg(P.seg+1); });
+A.addEventListener('play',()=>{ $('#btn-play').textContent='⏸'; });
+A.addEventListener('pause',()=>{ if(!A.ended && !P.playing) $('#btn-play').textContent='▶'; });
+A.addEventListener('error',()=>{ if(P.playing) setTimeout(()=>P.playSeg(P.seg+1),300); });
+function fmt(s){ s=Math.round(s); return s>=3600?`${Math.floor(s/3600)}h ${Math.floor(s%3600/60)}m`:`${Math.floor(s/60)}m ${s%60}s`; }
+function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+(async()=>{ VOICES=await api('/voices'); const st=await api('/status'); $('#status').textContent=st.llm?`LLM: ${st.llm_model}`:'heuristic casting · no LLM key'; showLibrary(); })();
+</script>
+</body>
+</html>
