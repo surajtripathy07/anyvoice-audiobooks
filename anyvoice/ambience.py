@@ -110,14 +110,14 @@ def _seamless(x: np.ndarray, fade=2.0) -> np.ndarray:
 
 def ensure_all() -> dict[str, str]:
     AMB_DIR.mkdir(parents=True, exist_ok=True); out = {}
+    import soundfile as sf
     for name in AMBIENCES:
-        ogg = AMB_DIR / f"{name}.ogg"
-        if not ogg.exists():
+        ogg, wav = AMB_DIR / f"{name}.ogg", AMB_DIR / f"{name}.wav"
+        if not wav.exists():                      # wav kept for export mixing
             x = _seamless(render(name)); x = x / (np.max(np.abs(x)) + 1e-6) * 0.8
-            wav = AMB_DIR / f"{name}.wav"
-            import soundfile as sf; sf.write(str(wav), x.astype(np.float32), SR, subtype="PCM_16")
+            sf.write(str(wav), x.astype(np.float32), SR, subtype="PCM_16")
+        if not ogg.exists():
             subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav), "-c:a", "libopus", "-b:a", "48k", str(ogg)], check=True)
-            wav.unlink()
         out[name] = ogg.name
     return out
 

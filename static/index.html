@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#14110f">
 <title>AnyVoice</title>
+<link rel="manifest" href="/static/manifest.json"><link rel="icon" href="/static/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/static/icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <style>
 :root{--bg:#14110f;--panel:#1f1a17;--panel2:#2a2320;--ink:#f3ede6;--mute:#a69b91;--acc:#f0a43c;--acc2:#7cc4a0;--bad:#e06c6c;--r:14px}
 *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 -apple-system,Inter,Segoe UI,Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
@@ -43,12 +45,32 @@ main{padding:0 16px 190px;max-width:760px;margin:0 auto}
 .err{color:var(--bad);font-size:13px;margin:8px 0}
 .hint{color:var(--mute);font-size:13px}
 .back{margin:10px 0 0;padding-left:0}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:flex-end;justify-content:center;z-index:20}.modal.on{display:flex}
+.sheet{background:var(--panel);border-radius:var(--r) var(--r) 0 0;padding:20px 20px calc(24px + env(safe-area-inset-bottom));max-width:560px;width:100%;max-height:85vh;overflow:auto}
+.sheet h2{margin:0 0 10px;font-size:20px}.sheet ol{padding-left:20px;line-height:1.6}.sheet code{background:var(--panel2);padding:2px 6px;border-radius:6px;font-size:13px}
+.sheet .close{float:right}
+.export{background:var(--panel);border-radius:var(--r);padding:14px 16px;margin:10px 0}.export .l{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.export select{padding:8px}.export a{color:var(--acc2)}
+header .icon{width:26px;height:26px;border-radius:7px}
 </style>
 </head>
 <body>
-<header><h1>🎧 AnyVoice</h1><span class="chip" id="status">…</span></header>
+<header><img class="icon" src="/static/icon.svg" alt=""><h1>AnyVoice</h1><span class="chip" id="status" onclick="help()" style="cursor:pointer">…</span><button class="ghost" onclick="help()" title="help" style="padding:6px 10px">?</button></header>
 <main id="view"></main>
 
+<div class="modal" id="help" onclick="if(event.target===this)this.classList.remove('on')"><div class="sheet">
+  <button class="ghost close" onclick="$('#help').classList.remove('on')">✕</button>
+  <h2>Drop a book. Hear the cast.</h2>
+  <ol>
+    <li><b>Drop</b> an epub, pdf or txt on the page. Casting starts immediately — tap a chapter and it plays within seconds while the rest renders behind you.</li>
+    <li><b>Cast</b> tab: every character with their voice. Change one and only that character's lines re-render, from where you are. Tap ▶ to preview a voice.</li>
+    <li><b>🌧 button</b>: scene sound (rain, hearth, carriage…) under the voices — off / low / mid.</li>
+    <li><b>Export</b> (on the book page): a real <code>.m4b</code> audiobook with chapter markers, or a single chapter as mp3.</li>
+    <li><b>Phone</b>: open <span id="help-url"></span> on the same Wi-Fi and add to home screen. Lock-screen controls work; it resumes where you stopped.</li>
+  </ol>
+  <p class="hint" id="help-llm"></p>
+  <p class="hint">Keys: <code>space</code> play/pause · <code>←</code> <code>→</code> previous/next line.</p>
+</div></div>
 <div id="player"><div id="np">
   <div class="ch" id="np-ch"></div><div class="who" id="np-who"></div><div class="txt" id="np-txt"></div>
   <div class="ctrls">
@@ -72,7 +94,8 @@ let VOICES={}, cur={book:null, tab:'chapters', data:null, timer:null};
 async function showLibrary(){
   clearInterval(cur.timer); cur.book=null; cur.data=null;
   const v=$('#view'); v.innerHTML=`<label class="drop" id="drop"><input type="file" accept=".epub,.pdf,.txt,.md" onchange="upload(this.files[0])">
-   <b>Drop a book here</b><br><span class="hint">epub · pdf · txt — casting starts immediately</span></label><div id="books"></div>`;
+   <b>Drop a book here</b><br><span class="hint">epub · pdf · txt — casting starts immediately</span></label>
+   <p class="hint" style="text-align:center;margin:-8px 0 14px">No book handy? <a href="#" onclick="sample();return false" style="color:var(--acc2)">Try Pride and Prejudice</a> (public domain)</p><div id="books"></div>`;
   const d=$('#drop'); ['dragenter','dragover'].forEach(e=>d.addEventListener(e,ev=>{ev.preventDefault();d.classList.add('over')}));
   ['dragleave','drop'].forEach(e=>d.addEventListener(e,ev=>{ev.preventDefault();d.classList.remove('over')}));
   d.addEventListener('drop',ev=>upload(ev.dataTransfer.files[0]));
@@ -84,6 +107,7 @@ async function renderBooks(){
     <div class="sub">${esc(b.author)} · ${b.chapters} chapters · ${b.attributed}/${b.chapters} cast · ${b.ready}/${b.segments||'?'} lines rendered</div>
     <div class="bar"><i style="width:${b.segments?100*b.ready/b.segments:0}%"></i></div></div>`).join(''):'<p class="hint">No books yet.</p>';
 }
+async function sample(){ $('#drop').innerHTML='<b>Fetching from Project Gutenberg…</b>'; const r=await fetch('/api/books/sample',{method:'POST'}); const j=await r.json(); if(!r.ok){alert(j.detail||'failed');showLibrary();return} openBook(j.id); }
 async function upload(f){ if(!f)return; const fd=new FormData(); fd.append('file',f);
   $('#drop').innerHTML='<b>Reading book…</b>';
   const r=await fetch('/api/books',{method:'POST',body:fd}); const j=await r.json();
@@ -94,7 +118,8 @@ async function upload(f){ if(!f)return; const fd=new FormData(); fd.append('file
 /* ---------------- book ---------------- */
 async function openBook(id){
   clearInterval(cur.timer); cur.book=id; cur.panelHtml=''; cur.data=await api('/books/'+id);
-  renderBook(); cur.timer=setInterval(async()=>{ if(cur.book!==id)return; cur.data=await api('/books/'+id); renderBook(true)},3000);
+  cur.exportHtml=''; exportState=null; renderBook(); pollExport();
+  cur.timer=setInterval(async()=>{ if(cur.book!==id)return; cur.data=await api('/books/'+id); renderBook(true); renderExport(cur.data)},3000);
   const pos=JSON.parse(localStorage.getItem('pos:'+id)||'null'); if(pos) P.showResume(pos);
 }
 function renderBook(refresh){
@@ -102,17 +127,34 @@ function renderBook(refresh){
   if(!refresh){ v.innerHTML=`<button class="ghost back" onclick="showLibrary()">‹ Library</button>
     <h2 style="margin:6px 0 2px">${esc(b.title)}</h2><div class="hint">${esc(b.author)} · casting: ${b.attribution==='llm'?'LLM':'heuristic (no API key)'}</div>
     <div class="tabs"><button id="tab-chapters" onclick="tab('chapters')">Chapters</button><button id="tab-cast" onclick="tab('cast')">Cast</button>
-    <button class="ghost" onclick="delBook()">🗑</button></div><div id="errs"></div><div id="panel"></div>`; }
+    <button class="ghost" onclick="delBook()">🗑</button></div><div id="errs"></div><div id="export"></div><div id="panel"></div>`; }
+  renderExport(b);
   $('#tab-chapters').className=cur.tab==='chapters'?'on':''; $('#tab-cast').className=cur.tab==='cast'?'on':'';
   $('#errs').innerHTML=b.errors.length?`<div class="err">${esc(b.errors[b.errors.length-1])}</div>`:'';
   const html=cur.tab==='chapters'?chaptersHtml(b):castHtml(b);
   if(html!==cur.panelHtml){ cur.panelHtml=html; $('#panel').innerHTML=html; }
 }
 function tab(t){cur.tab=t;cur.panelHtml='';renderBook(true)}
+let exportState=null;
+function renderExport(b){
+  const done=b.chapters.filter(c=>c.status==='ready'&&c.segments&&c.ready===c.segments).length, total=b.chapters.length;
+  const e=exportState||{status:'idle'}; let body='';
+  if(e.status==='running') body=`<span class="pill work">exporting ${e.progress}/${e.total} chapters…</span>`;
+  else if(e.status==='done') body=`<a href="/api/books/${b.id}/export/download">⬇ Download ${esc(e.file)}</a> <span class="hint">(${e.chapters} chapters)</span>`;
+  else if(e.status==='error') body=`<span class="err">${esc(e.error)}</span>`;
+  const html=`<div class="export"><div class="l"><b>Export</b><span class="hint">${done}/${total} chapters fully rendered</span>
+    <select id="exp-amb"><option value="off">no ambience</option><option value="low">ambience: low</option><option value="mid">ambience: mid</option></select>
+    <button class="primary" onclick="doExport()" ${done===0||e.status==='running'?'disabled':''}>.m4b audiobook</button>
+    <span class="hint">· per-chapter mp3: the <i>mp3</i> tag on each chapter</span></div><div style="margin-top:8px">${body}</div></div>`;
+  if(html!==cur.exportHtml){ cur.exportHtml=html; $('#export').innerHTML=html; }
+}
+async function doExport(){ const amb=$('#exp-amb').value; exportState=await api('/books/'+cur.book+'/export',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ambience:amb})}); renderExport(cur.data); pollExport(); }
+async function pollExport(){ if(!cur.book)return; exportState=await api('/books/'+cur.book+'/export'); renderExport(cur.data); if(exportState.status==='running') setTimeout(pollExport,2000); }
 function chaptersHtml(b){ return b.chapters.map(c=>{
   const st=c.status==='ready'?(c.ready===c.segments?`<span class="pill ok">ready · ${fmt(c.duration)}</span>`:`<span class="pill work">${c.ready}/${c.segments} lines</span>`)
     :c.status==='attributing'?'<span class="pill work">casting…</span>':'<span class="pill">queued</span>';
-  return `<div class="row ${P.ch===c.idx&&P.book===b.id?'now':''}" onclick="P.start('${b.id}',${c.idx},0)"><div class="t"><b>${esc(c.title)}</b><small>${c.words} words</small></div>${st}</div>`}).join('');}
+  const dl=c.status==='ready'&&c.ready===c.segments?`<a href="/api/books/${b.id}/chapters/${c.idx}/mp3?ambience=${(AMB.levels[AMB.li]||{}).n||'off'}" class="pill" onclick="event.stopPropagation()" title="download mp3">mp3</a>`:'';
+  return `<div class="row ${P.ch===c.idx&&P.book===b.id?'now':''}" onclick="P.start('${b.id}',${c.idx},0)"><div class="t"><b>${esc(c.title)}</b><small>${c.words} words</small></div>${dl}${st}</div>`}).join('');}
 function castHtml(b){
   const opt=sel=>Object.entries(VOICES).map(([k,m])=>`<option value="${k}" ${k===sel?'selected':''}>${m.gender==='female'?'♀':'♂'} ${k.slice(3)} — ${m.desc}</option>`).join('');
   const row=(name,meta,voice)=>`<div class="row"><div class="t"><b>${esc(name)}</b><small>${[meta.gender,meta.age].filter(x=>x&&x!=='unknown').join(', ')}${meta.description?' · '+esc(meta.description):''}</small></div>
@@ -184,7 +226,12 @@ A.addEventListener('pause',()=>{ if(!A.ended && !P.playing) $('#btn-play').textC
 A.addEventListener('error',()=>{ if(P.playing) setTimeout(()=>P.playSeg(P.seg+1),300); });
 function fmt(s){ s=Math.round(s); return s>=3600?`${Math.floor(s/3600)}h ${Math.floor(s%3600/60)}m`:`${Math.floor(s/60)}m ${s%60}s`; }
 function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-(async()=>{ VOICES=await api('/voices'); AMBNAMES=(await api('/ambience')).names.filter(n=>n!=='none'); const st=await api('/status'); $('#status').textContent=st.llm?`LLM: ${st.llm_model}`:'heuristic casting · no LLM key'; showLibrary(); })();
+function help(){ $('#help').classList.add('on'); }
+document.addEventListener('keydown',e=>{ if(e.target.tagName==='SELECT'||e.target.tagName==='INPUT')return; if(e.code==='Space'){e.preventDefault();P.toggle()} else if(e.key==='ArrowRight')P.step(1); else if(e.key==='ArrowLeft')P.step(-1); });
+(async()=>{ VOICES=await api('/voices'); AMBNAMES=(await api('/ambience')).names.filter(n=>n!=='none'); const st=await api('/status'); $('#status').textContent=st.llm?`LLM: ${st.llm_model}`:'heuristic casting · no LLM key';
+  $('#help-url').innerHTML=`<code>http://${st.lan_ip||location.hostname}:${location.port||80}</code>`;
+  $('#help-llm').innerHTML=st.llm?`Casting with <code>${esc(st.llm_model)}</code>.`:`<b>No LLM key</b> — casting uses regex heuristics (rough on untagged dialogue, no emotion). Add <code>ANTHROPIC_API_KEY</code> (or OpenRouter / OpenAI) to <code>.env</code> and restart for proper casting, emotion and scene detection.`;
+  showLibrary(); try{ if(!localStorage.getItem('seen')){ help(); localStorage.setItem('seen','1'); } }catch(e){} })();
 </script>
 </body>
 </html>

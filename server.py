@@ -1,6 +1,6 @@
 """AnyVoice — drop a book, get a full-cast audiobook, start listening while it renders."""
 from __future__ import annotations
-import os, shutil, tempfile
+import os, re, shutil, tempfile
 from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv()
@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from anyvoice.pipeline import Library, NARRATOR
 from anyvoice.tts import VOICES, AUDIO_DIR
 from anyvoice.ambience import ensure_all, AMB_DIR, AMBIENCES
+from anyvoice.export import Exporter
 
 ROOT = Path(__file__).resolve().parent
 app = FastAPI(title="AnyVoice")
@@ -24,9 +25,17 @@ def index():
     return FileResponse(ROOT / "static" / "index.html")
 
 
+def _lan_ip():
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.connect(("10.255.255.255", 1)); ip = s.getsockname()[0]; s.close(); return ip
+    except Exception:
+        return None
+
+
 @app.get("/api/status")
 def status():
-    return {"llm": bool(lib.llm), "llm_provider": getattr(lib.llm, "provider", None), "llm_model": getattr(lib.llm, "model", None),
+    return {"llm": bool(lib.llm), "lan_ip": _lan_ip(), "llm_provider": getattr(lib.llm, "provider", None), "llm_model": getattr(lib.llm, "model", None),
             "llm_error": lib.llm_error, "books": len(lib.books)}
 
 
@@ -74,6 +83,25 @@ async def upload(file: UploadFile = File(...)):
     finally:
         path.unlink(missing_ok=True)
     return {"id": job.bid, "title": job.state["title"], "chapters": len(job.state["chapters"])}
+
+
+SAMPLE_URL = "https://www.gutenberg.org/cache/epub/1342/pg1342-images.epub"
+
+@app.post("/api/books/sample")
+def sample_book():
+    import urllib.request
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".epub") as tmp:
+        req = urllib.request.Request(SAMPLE_URL, headers={"User-Agent": "Mozilla/5.0 AnyVoice"})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            shutil.copyfileobj(r, tmp)
+        path = Path(tmp.name)
+    try:
+        job = lib.add(path)
+    except Exception as e:
+        raise HTTPException(400, f"could not read sample: {e}")
+    finally:
+        path.unlink(missing_ok=True)
+    return {"id": job.bid, "title": job.state["title"]}
 
 
 def _job(bid: str):
@@ -124,6 +152,43 @@ def swap_voice(bid: str, v: VoiceSwap):
     except ValueError as e:
         raise HTTPException(400, str(e))
     return {"ok": True}
+
+
+_exporters: dict[str, Exporter] = {}
+def _exporter(bid: str) -> Exporter:
+    job = _job(bid)
+    if bid not in _exporters:
+        _exporters[bid] = Exporter(job)
+    return _exporters[bid]
+
+
+class ExportReq(BaseModel):
+    ambience: str = "off"     # off | low | mid
+
+@app.post("/api/books/{bid}/export")
+def export_start(bid: str, r: ExportReq):
+    return _exporter(bid).start(r.ambience)
+
+@app.get("/api/books/{bid}/export")
+def export_status(bid: str):
+    return _exporter(bid).state
+
+@app.get("/api/books/{bid}/export/download")
+def export_download(bid: str):
+    ex = _exporter(bid)
+    if ex.state["status"] != "done" or not ex.state["file"]:
+        raise HTTPException(404, "no export yet")
+    return FileResponse(ex.dir / ex.state["file"], media_type="audio/mp4", filename=ex.state["file"])
+
+@app.get("/api/books/{bid}/chapters/{idx}/mp3")
+def chapter_mp3(bid: str, idx: int, ambience: str = "off"):
+    job = _job(bid)
+    c = job.chapter(idx)
+    if c["status"] != "ready" or not all(s["audio"] for s in c["segments"]):
+        raise HTTPException(409, "chapter not fully rendered yet")
+    p = _exporter(bid).chapter_mp3(idx, ambience)
+    safe = re.sub(r"[^\w\s-]", "", c["title"]).strip() or f"chapter-{idx}"
+    return FileResponse(p, media_type="audio/mpeg", filename=f"{safe}.mp3")
 
 
 app.mount("/audio", StaticFiles(directory=str(AUDIO_DIR)), name="audio")

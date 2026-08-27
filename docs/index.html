@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AnyVoice — full-cast audiobooks from any book</title>
+<meta name="description" content="Drop an epub, pdf or txt. AnyVoice finds the characters, gives each a voice, and starts playing on your phone in seconds. Runs on your own machine. MIT.">
+<meta property="og:title" content="AnyVoice — Drop a book. Hear the cast."><meta property="og:description" content="Full-cast audiobooks from any epub, rendered locally. Open source."><meta property="og:image" content="https://surajtripathy07.github.io/anyvoice-audiobooks/og.png">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+:root{--bg:#14110f;--panel:#1f1a17;--panel2:#2a2320;--ink:#f3ede6;--mute:#a69b91;--acc:#f0a43c;--acc2:#7cc4a0}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 -apple-system,Inter,Segoe UI,Roboto,sans-serif}
+a{color:var(--acc2)}code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em}
+.wrap{max-width:900px;margin:0 auto;padding:0 22px}
+nav{display:flex;align-items:center;gap:12px;padding:18px 0}nav img{width:30px;height:30px;border-radius:8px}nav b{font-size:18px}nav .sp{flex:1}nav a{color:var(--mute);text-decoration:none;margin-left:18px;font-size:15px}
+.hero{padding:56px 0 34px}.hero h1{font-size:clamp(38px,7vw,64px);line-height:1.05;margin:0 0 18px;letter-spacing:-.5px}.hero h1 em{font-style:normal;color:var(--acc)}
+.hero p{font-size:20px;color:var(--mute);max-width:640px;margin:0 0 26px}
+.cta{display:inline-block;background:var(--acc);color:#1a1207;font-weight:700;padding:14px 22px;border-radius:12px;text-decoration:none;margin-right:10px}
+.cta.alt{background:var(--panel2);color:var(--ink)}
+.demo{background:var(--panel);border-radius:18px;padding:18px 20px;margin:34px 0 10px;border:1px solid #33291f}
+.demo .ch{color:var(--mute);font-size:13px}.demo .who{color:var(--acc);font-weight:700;font-size:14px;margin-top:6px}.demo .txt{font-size:17px;margin:4px 0 12px}
+.lines{display:grid;gap:10px}.line{display:flex;gap:12px;align-items:flex-start}.line .n{min-width:110px;color:var(--acc);font-weight:600;font-size:14px;padding-top:2px}.line .n.nr{color:var(--mute)}.line .t{flex:1}.line .tag{font-size:12px;color:var(--acc2);background:var(--panel2);padding:2px 8px;border-radius:99px;white-space:nowrap}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin:26px 0}
+.card{background:var(--panel);border-radius:16px;padding:18px}.card h3{margin:0 0 6px;font-size:17px}.card p{margin:0;color:var(--mute);font-size:15px}
+h2{font-size:28px;margin:54px 0 14px;letter-spacing:-.3px}
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;counter-reset:s}.flow div{background:var(--panel);border-radius:12px;padding:14px;font-size:14px;color:var(--mute)}.flow div b{display:block;color:var(--ink);margin-bottom:4px}.flow div::before{counter-increment:s;content:counter(s);display:inline-block;background:var(--panel2);color:var(--acc);border-radius:99px;width:22px;height:22px;text-align:center;line-height:22px;font-size:12px;margin-bottom:8px}
+pre{background:#0e0c0a;border:1px solid #2c2521;border-radius:12px;padding:16px;overflow-x:auto;font-size:14px;line-height:1.5}
+table{width:100%;border-collapse:collapse;font-size:15px}td,th{text-align:left;padding:9px 8px;border-bottom:1px solid #2c2521}th{color:var(--mute);font-weight:600}
+.honest{border-left:3px solid var(--acc);padding:4px 16px;color:var(--mute);margin:20px 0}
+footer{color:var(--mute);font-size:14px;padding:50px 0 40px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav><img src="icon.svg" alt=""><b>AnyVoice</b><span class="sp"></span><a href="#how">How it works</a><a href="#start">Quick start</a><a href="https://github.com/surajtripathy07/anyvoice-audiobooks">GitHub</a></nav>
+
+<section class="hero">
+  <h1>Drop a book.<br><em>Hear the cast.</em></h1>
+  <p>AnyVoice turns any epub, pdf or txt into a full-cast audiobook — every character found and voiced automatically — and starts playing on your phone in seconds while the rest renders. On your own machine. Open source.</p>
+  <a class="cta" href="https://github.com/surajtripathy07/anyvoice-audiobooks#quick-start">Get it running</a>
+  <a class="cta alt" href="https://github.com/surajtripathy07/anyvoice-audiobooks">Star on GitHub</a>
+
+  <div class="demo">
+    <div class="ch">Pride and Prejudice · Chapter I · <span style="color:var(--acc2)">⟡ hearth</span></div>
+    <div class="lines" style="margin-top:12px">
+      <div class="line"><span class="n nr">Narrator</span><span class="t">It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife.</span></div>
+      <div class="line"><span class="n">Mrs. Bennet</span><span class="t">“My dear Mr. Bennet, have you heard that Netherfield Park is let at last?”</span><span class="tag">excited</span></div>
+      <div class="line"><span class="n nr">Narrator</span><span class="t">Mr. Bennet replied that he had not.</span></div>
+      <div class="line"><span class="n">Mrs. Bennet</span><span class="t">“But it is, for Mrs. Long has just been here, and she told me all about it.”</span><span class="tag">urgent</span></div>
+      <div class="line"><span class="n">Mr. Bennet</span><span class="t">“You want to tell me, and I have no objection to hearing it.”</span><span class="tag">sarcastic</span></div>
+    </div>
+  </div>
+  <p style="color:var(--mute);font-size:14px;margin:6px 4px">Three voices, two emotions, one scene tag — all decided by the pipeline, none by you.</p>
+</section>
+
+<div class="grid">
+  <div class="card"><h3>Casts itself</h3><p>An LLM reads each chapter, works out who says what, discovers characters as they appear, and tags emotion and setting. Voices are matched to gender and age and kept distinct.</p></div>
+  <div class="card"><h3>Plays in seconds</h3><p>Kokoro renders narration ~4× faster than realtime on a laptop. The pipeline stays a chapter ahead of wherever you are listening.</p></div>
+  <div class="card"><h3>Recast anyone</h3><p>Don't like a voice? Swap it. Only that character's lines re-render, starting from your position.</p></div>
+  <div class="card"><h3>Sounds like a place</h3><p>Rain, thunder, a hearth, a carriage, ballroom murmur — synthesised, license-free, mixed low under the voices. Off / low / mid.</p></div>
+  <div class="card"><h3>Actually expressive</h3><p>Optional Chatterbox pass re-renders dialogue with emotion in the background and swaps it in as it finishes.</p></div>
+  <div class="card"><h3>Yours</h3><p>Runs on your machine. Export a real <code>.m4b</code> with chapter markers. Your books never leave home except the text sent for casting.</p></div>
+</div>
+
+<h2 id="how">How it works</h2>
+<div class="flow">
+  <div><b>Ingest</b>epub / pdf / txt → clean chapters</div>
+  <div><b>Segment</b>narration vs “quotes”, numbered</div>
+  <div><b>Cast</b>LLM labels speaker, emotion, scene — labels only, never the text</div>
+  <div><b>Voice</b>Kokoro now, Chatterbox upgrade later</div>
+  <div><b>Play</b>segments stream as they land; ambience mixed in-browser</div>
+</div>
+<p class="honest">The LLM gets the chapter with quotes tagged <code>[Q12]</code> and returns only labels — about 30k output tokens for a whole novel, roughly $1 with Claude Opus 5, less with Kimi K3 or Sonnet. Voices cost nothing.</p>
+
+<h2 id="start">Quick start</h2>
+<pre>git clone https://github.com/surajtripathy07/anyvoice-audiobooks &amp;&amp; cd anyvoice-audiobooks
+uv sync
+mkdir -p models &amp;&amp; cd models &amp;&amp; \
+  curl -LO https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx &amp;&amp; \
+  curl -LO https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin &amp;&amp; cd ..
+cp .env.example .env     # add one LLM key
+./run.sh                 # → http://localhost:8080  ·  phone: http://&lt;your-ip&gt;:8080</pre>
+<table>
+<tr><th>Needs</th><th></th></tr>
+<tr><td>Python 3.10+ with <a href="https://docs.astral.sh/uv/">uv</a>, ffmpeg</td><td>any Mac / Linux; Windows should work, untested</td></tr>
+<tr><td>~400 MB Kokoro model</td><td>two files, downloaded once</td></tr>
+<tr><td>One LLM key</td><td>Anthropic, OpenRouter (Kimi K3…) or OpenAI. Optional — a regex fallback works, roughly</td></tr>
+<tr><td>Chatterbox (optional)</td><td>~3 GB, Apple Silicon or CUDA, for expressive dialogue</td></tr>
+</table>
+
+<h2>Honest status</h2>
+<p class="honest">A few days old. Tested end to end on <i>Pride and Prejudice</i>. PDF extraction is heuristic. Single-quote dialogue isn't split yet. Chatterbox trails realtime on a laptop, which is why it runs as a background upgrade. If you try it and something breaks, <a href="https://github.com/surajtripathy07/anyvoice-audiobooks/issues">open an issue</a> with the book's source and a short excerpt.</p>
+
+<h2>Copyright, plainly</h2>
+<p style="color:var(--mute)">AnyVoice converts books you have, for your own listening, on your own hardware — like a screen reader. It stores nothing outside your machine. Don't redistribute audio made from copyrighted books. Public-domain works are fair game for anything.</p>
+
+<footer>MIT © 2026 Suraj Tripathi · Built with <a href="https://github.com/hexgrad/kokoro">Kokoro</a> and <a href="https://github.com/resemble-ai/chatterbox">Chatterbox</a> · <a href="https://github.com/surajtripathy07/anyvoice-audiobooks">Source</a></footer>
+</div>
+</body>
+</html>
