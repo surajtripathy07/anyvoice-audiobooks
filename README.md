@@ -41,6 +41,18 @@ cp .env.example .env        # add ONE LLM key (see below) — optional but stron
 
 Drop an epub on the page. Public-domain books from [Project Gutenberg](https://www.gutenberg.org/ebooks/1342) are perfect for a first try.
 
+### Troubleshooting
+
+**Kokoro model download fails or is incomplete:**
+
+If the curl commands are interrupted or fail partway through, the models directory may be left with incomplete files. Delete the directory and re-run the curl commands:
+
+```bash
+rm -rf models && mkdir -p models && (cd models && \
+  curl -LO https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx && \
+  curl -LO https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin)
+```
+
 ### LLM key (casting quality)
 
 | Provider | `.env` | Default model | ~Cost / novel |
