@@ -91,6 +91,12 @@ Good tools already exist; the difference is that they make audiobook *files* and
 
 AnyVoice converts books *you* have for *your* listening, on your hardware, like a screen reader. It stores nothing outside your machine and shares nothing. Don't redistribute the audio it makes from copyrighted books. Public-domain works are fair game for anything.
 
+## Credits
+
+- [Kokoro-82M](https://github.com/hexgrad/kokoro) — Apache-2.0, TTS synthesis engine
+- [Chatterbox](https://github.com/resemble-ai/chatterbox) — MIT, expressive dialogue rendering
+- [Project Gutenberg](https://www.gutenberg.org/) — public-domain books, perfect for testing
+
 ## License
 
 MIT © 2026 Suraj Tripathi. Kokoro is Apache-2.0; Chatterbox is MIT.
