@@ -16,7 +16,7 @@ cp .env.example .env                      # add an LLM key (optional; heuristic 
 ./run.sh                                  # http://localhost:8080
 ```
 
-Optional expressive dialogue: `engines/chatterbox/run.sh` (downloads ~3 GB on first start; needs a GPU/Apple Silicon).
+Optional expressive dialogue: `engines/chatterbox/run.sh` (downloads ~3 GB on first start; needs a GPU/Apple Silicon). The app runs fine without it — Kokoro renders everything.
 
 There is no test suite yet (see "Good first contributions"). Sanity-check a change by dropping a public-domain
 epub from [Project Gutenberg](https://www.gutenberg.org/) and listening to the first chapter.
