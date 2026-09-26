@@ -20,6 +20,7 @@ Optional expressive dialogue: `engines/chatterbox/run.sh` (downloads ~3 GB on fi
 
 There is no test suite yet (see "Good first contributions"). Sanity-check a change by dropping a public-domain
 epub from [Project Gutenberg](https://www.gutenberg.org/) and listening to the first chapter.
+Before opening a PR, run `python -m py_compile anyvoice/*.py server.py` to catch syntax errors early.
 
 ## Map of the code
 
