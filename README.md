@@ -23,7 +23,7 @@ Cost: **$0** for voices. The LLM casting is ~$1 per novel with Claude Opus 5, le
 
 ## Quick start
 
-Requires Python 3.10+ with [uv](https://docs.astral.sh/uv/), `ffmpeg`, and ~400 MB for the Kokoro model.
+Requires Python 3.12+ with [uv](https://docs.astral.sh/uv/), `ffmpeg`, and ~400 MB for the Kokoro model.
 
 **Install ffmpeg:**
 - **macOS:** `brew install ffmpeg`
