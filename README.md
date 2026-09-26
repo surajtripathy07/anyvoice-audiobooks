@@ -39,6 +39,8 @@ cp .env.example .env        # add ONE LLM key (see below) — optional but stron
 ./run.sh                    # → http://localhost:8080   phone: http://<your-mac-ip>:8080
 ```
 
+Want to hack on the code? See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 Drop an epub on the page. Public-domain books from [Project Gutenberg](https://www.gutenberg.org/ebooks/1342) are perfect for a first try.
 
 ### LLM key (casting quality)
