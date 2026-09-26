@@ -83,7 +83,7 @@ A few days old. Tested end-to-end on *Pride and Prejudice* (63 chapters). PDF ex
 
 ## Related projects
 
-Choose AnyVoice if you want to listen while it renders; the other tools here are designed to produce finished audiobook files. Good tools already exist; the difference is that they make audiobook *files* and AnyVoice is an audiobook *app* — casting runs a chapter ahead of you and you listen while it renders.
+Good tools already exist; the difference is that they make audiobook *files* and AnyVoice is an audiobook *app* — casting runs a chapter ahead of you and you listen while it renders.
 
 - [ebook2audiobook](https://github.com/DrewThomasson/ebook2audiobook) — the category leader: single narrator, voice cloning, 1,000+ languages, many engines.
 - [audiblez](https://github.com/santinic/audiblez), [abogen](https://github.com/denizsafak/abogen) — one-command Kokoro → `.m4b` (abogen adds synced captions).
